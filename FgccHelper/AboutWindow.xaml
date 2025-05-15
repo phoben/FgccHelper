@@ -1,0 +1,24 @@
+<Window x:Class="FgccHelper.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FgccHelper"
+        mc:Ignorable="d"
+        Title="关于 FgccHelper" Height="200" Width="350"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize" ShowInTaskbar="False">
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" 
+                   VerticalAlignment="Top" HorizontalAlignment="Center" TextWrapping="Wrap" Margin="0,10,0,0" Height="111" LineHeight="20" Width="300"><Run Text="软件名称：活字格工程统计小工具"/><LineBreak/><Run Text="版本号：v1.0.0"/><LineBreak/><Run Language="zh-cn" Text="作者：超哥"/><LineBreak/><Run Language="zh-cn" Text="邮箱：phoben@qq.com"/><LineBreak/><Run Language="zh-cn" Text="微信：13972707111"/></TextBlock>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Git仓库" Width="80" HorizontalAlignment="Right" Margin="0,0,10,0" Click="GitRepoButton_Click"/>
+            <Button Content="确定" Width="80" HorizontalAlignment="Right" IsCancel="True" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window> 

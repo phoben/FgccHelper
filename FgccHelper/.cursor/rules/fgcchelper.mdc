@@ -1,0 +1,144 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+### 项目介绍
+我们需要开发一款软件，名为"FgccHelper"，它是一个基于.NET + WPF + NETFramework v4.7.2开发的小工具，用于读取活字格工程文件并统计工程内容数据。
+
+### 任务目标
+1. 开发一款可视化小工具(绿色免安装的单应用exe)，允许用户选择一个根目录路径，工具自动统计工程信息；
+2. 工具使用基于.NET+WPF来进行开发，提供可视化的操作界面和数据展示组件；
+3. 分析结果包含以下关键数据：页面数量(Pages)、数据表数量(Tables)、流程数量(Process)、报表数量（Reports）、接口数量（ServerCommands服务端命令数量）、自定义插件数量（Plugin插件数量）、自定义组件数量（UserControlPages）、计划任务数量(SchedulerTasks)、扩展JavaScript数量(UserJaveScript)、外部JS文件数量、外部CSS文件数量等。
+4. 每一项关键数据都可以查看对应的详细信息，例如点击页面数量可以查看具体页面清单；
+5. 每一项数据获得方式，下面我都会详细说明，你需要做好逻辑的编写，保证获取数据的准确性；
+6. 做好异常兼容处理，例如有些文件、文件夹可能没有内容或文件，此时应该被认为是0；指定信息（如版本号）无法读取时，应返回空字符串。
+7. 每个阶段的开发任务完成后，需要将开发日志写入到 [README](mdc:README)文件中，以便后续查阅，确保开发步骤正确；
+
+### 开发思路
+1.  **`Project` 类 (工程项目)**
+    *   `ProjectName` (string): 工程的名称，即用户选择的根目录文件夹名称。
+    *   `DesignerVersion` (string): 设计器版本号。从 `DocumentInfo` 文件中读取 `VersionString` 属性。如果文件不存在、无法解析或属性缺失，则此值为**空字符串**。
+    *   `Statistics` (List of `StatisticItem`): 一个包含所有统计项的列表。
+
+2.  **`StatisticItem` 类 (统计项)**
+    *   `Name` (string): 统计项的名称，例如："页面数量"、"数据表数量"。
+    *   `Count` (int): 该统计项的数量。如果统计过程中发生任何错误（如文件/文件夹不存在、无法读取数据等），则数量为 **0**。
+    *   `Description` (string): 对该统计项的固定描述文字。例如：
+        *   页面数量: "工程中所有页面的总数量"
+        *   数据表数量: "工程中所有数据表的总数量"
+        *   流程数量: "工程中所有业务流程的总数量"
+        *   报表数量: "工程中所有报表的总数量"
+        *   接口数量: "工程中所有服务端命令（接口）的总数量"
+        *   自定义插件数量: "工程中所有自定义插件 (.zip) 的总数量"
+        *   自定义组件数量: "工程中所有自定义组件 (.json) 的总数量"
+        *   计划任务数量: "工程中所有计划任务的总数量"
+        *   扩展JavaScript数量: "工程中所有扩展JavaScript (.js) 文件的总数量"
+        *   外部JS文件数量: "工程中引用的外部JavaScript文件的总数量"
+        *   外部CSS文件数量: "工程中引用的外部CSS文件的总数量"
+    *   `Details` (List of `DetailEntry`): 该统计项下的详细清单。
+
+3.  **`DetailEntry` 类 (清单条目详情)**
+    *   `Name` (string): 文件名（不含路径）或资源名称。
+    *   `Size` (string): 文件大小，以 **MB** 为单位显示，可保留1-2位小数 (例如："0.15 MB")。对于不适用大小的项（如外部链接），可显示 "N/A"。
+    *   `FileType` (string): 文件类型。对于文件，即其**后缀名**（例如："json", "bpmn", "js", "zip"）。对于外部JS/CSS，可以是 "外部JS链接", "本地JS文件", "外部CSS链接", "本地CSS文件"。
+
+### UI设计思路
+1. 使用WPF来设计窗口界面；
+2. 界面需要美观、现代化，配色干净、简洁、大气；
+3. 卡片区域用来渲染本工程中的所有统计信息对象的`名称`、`数量`信息；
+4. 点击卡片，可以在下方的列表组件中切换展示具体的清单明细；
+5. 允许用户选择一个文件夹目录作为工程目录；
+6. 窗口标题为用户选择的目录名称（也是工程名称）+ 设计器版本（如果版本号为空字符串，则只显示工程名称，或提示"版本未知"）；
+7. 允许用户通过按钮重新统计信息（刷新按钮）；
+
+### 数据统计规则
+#### 设计器版本
+*   文件： `DocumentInfo` (位于工程根目录)
+*   获取规则：将文件中的内容解析为json对象，读取`VersionString`属性值。
+*   错误处理：若文件不存在、无法解析或属性缺失，设计器版本号返回**空字符串**。
+
+#### 页面数量
+*   文件夹： `Pages`
+*   统计规则：统计该目录下所有 `.json` 格式文件的总数。若文件夹不存在或无内容，数量为0。
+*   清单(`Details`): 每一项包含 `Name`(文件名), `Size`(MB), `FileType`("json")。
+
+#### 数据表数量
+*   文件夹：`Tables`
+*   统计规则：统计该目录下所有 `.json` 格式文件的总数。若文件夹不存在或无内容，数量为0。
+*   清单(`Details`): 每一项包含 `Name`(文件名), `Size`(MB), `FileType`("json")。
+
+#### 流程数量
+*   文件夹：`Process`
+*   统计规则：统计该目录下所有 `.bpmn` 格式文件的总数。若文件夹不存在或无内容，数量为0。
+*   清单(`Details`): 每一项包含 `Name`(文件名), `Size`(MB), `FileType`("bpmn")。
+
+#### 报表数量
+*   文件夹： `Reports`
+*   统计规则：统计该目录下所有 `.json` 格式文件的总数。若文件夹不存在或无内容，数量为0。
+*   清单(`Details`): 每一项包含 `Name`(文件名), `Size`(MB), `FileType`("json")。
+
+#### 接口数量
+*   文件夹：`ServerCommands`
+*   统计规则：统计该目录下所有 `.json` 格式文件的总数。若文件夹不存在或无内容，数量为0。
+*   清单(`Details`): 每一项包含 `Name`(文件名), `Size`(MB), `FileType`("json")。
+
+#### 自定义插件数量
+*   文件夹：`Plugin`
+*   统计规则：统计该目录下所有 `.zip` 格式文件的总数。若文件夹不存在或无内容，数量为0。
+*   清单(`Details`): 每一项包含 `Name`(文件名), `Size`(MB), `FileType`("zip")。
+
+#### 自定义组件数量
+*   文件夹：`UserControlPages` (已更正)
+*   统计规则：统计该目录下所有 `.json` 格式文件的总数。若文件夹不存在或无内容，数量为0。
+*   清单(`Details`): 每一项包含 `Name`(文件名), `Size`(MB), `FileType`("json")。
+
+#### 计划任务数量
+*   文件夹：`SchedulerTasks`
+*   统计规则：统计该目录下所有 `.json` 格式文件的总数。若文件夹不存在或无内容，数量为0。
+*   清单(`Details`): 每一项包含 `Name`(文件名), `Size`(MB), `FileType`("json")。
+
+#### 扩展JavaScript
+*   文件夹：`UserJaveScript`
+*   统计规则：统计该目录下所有 `.js` 格式文件的总数。若文件夹不存在或无内容，数量为0。
+*   清单(`Details`): 每一项包含 `Name`(文件名), `Size`(MB), `FileType`("js")。
+
+#### 外部JS文件数量
+*   文件： `CustomLibraries.json` (位于工程根目录)
+*   统计规则：读取文件为json对象，统计`UserJSFileList`数组成员数量。若文件不存在、无法解析或`UserJSFileList`不存在，则数量为0。
+*   清单(`Details`): 每一项包含 `Name`(来自`UserJSFileList`中对象的`Name`属性), `Size`("N/A"), `FileType`(根据`IsLink`属性区分，如 "外部JS链接" 或 "本地JS文件")。
+*   JSON示例：
+```json
+{
+  "UserJSFileList": [
+    {
+      "Name": "https://g.alicdn.com/dingding/dingtalk-jsapi/3.0.12/dingtalk.open.js",
+      "IsLink": true
+    },
+    {
+      "Name": "CustomFormula.js"
+    }
+  ]
+}
+```
+
+#### 外部CSS文件数量
+*   文件： `CustomLibraries.json` (位于工程根目录)
+*   统计规则：读取文件为json对象，统计`UserCSSFileList`数组成员数量。若文件不存在、无法解析或`UserCSSFileList`不存在，则数量为0。
+*   清单(`Details`): 每一项包含 `Name`(来自`UserCSSFileList`中对象的`Name`属性), `Size`("N/A"), `FileType`(根据`IsLink`属性区分，如 "外部CSS链接" 或 "本地CSS文件"。若无`IsLink`，可根据Name是否为URL判断)。
+*   JSON示例：
+```json
+{
+  "UserCSSFileList": [
+    {
+      "Name": "base.css"
+    },
+    {
+      "Name": "https://some.cdn.com/style.css",
+      "IsLink": true // 假设CSS项也可能有IsLink
+    }
+  ]
+}
+```
+
+
