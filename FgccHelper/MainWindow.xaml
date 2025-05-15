@@ -53,7 +53,7 @@
 
         <Grid x:Name="MainContentGrid" Grid.Row="1"> <!-- MainContentGrid now takes all space below menu -->
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/> <!-- Existing content column, 2 parts of space -->
+                <ColumnDefinition Width="1.7*"/> <!-- Existing content column, 2 parts of space -->
                 <ColumnDefinition Width="*"/> <!-- Rank list column, 1 part of space -->
             </Grid.ColumnDefinitions>
             
