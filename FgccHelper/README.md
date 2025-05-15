@@ -1,93 +1,103 @@
-# FgccHelper 开发日志
+# FgccHelper 软件说明文档
 
-## 阶段一：基础框架与核心功能开发 (进行中)
+## 1. 软件简介
 
-### 1. 项目初始化与模型类创建
-*   **日期**: 2024-07-26
-*   **任务**:
-    *   根据需求文档，定义了核心数据模型：
-        *   `Models/DetailEntry.cs`: 用于存储每个统计项的详细条目信息 (名称, 大小, 文件类型)。
-        *   `Models/StatisticItem.cs`: 用于存储单个统计项的信息 (名称, 数量, 描述, 详细列表)。
-        *   `Models/Project.cs`: 用于存储整个工程的统计信息 (工程名, 设计器版本, 统计项列表)。
-*   **状态**: 已完成
+FgccHelper 是一款基于 .NET Framework 4.7.2 和 WPF 技术开发的桌面小工具。它专门用于读取和分析"活字格"低代码开发平台创建的工程文件，帮助用户快速统计和了解工程的各项关键数据。本工具旨在提供一个绿色免安装、操作便捷、界面友好的解决方案，方便开发者和项目管理者对活字格工程进行概览和数据提取。
 
-### 2. UI 界面初步设计 (XAML)
-*   **日期**: 2024-07-26
-*   **任务**:
-    *   创建了主窗口 `MainWindow.xaml`。
-    *   设计了基本的UI布局，包括：
-        *   顶部操作区域：放置"选择工程目录"按钮、显示已选路径的文本块、以及"刷新"按钮。
-        *   中部统计卡片区域：使用 `WrapPanel` 来动态展示各个统计项的卡片。
-        *   底部详细信息列表区域：使用 `ListView` (配合 `GridView`) 来展示选中统计项的详细清单。
-*   **状态**: 已完成
+## 2. 核心功能
 
-### 3. 核心数据统计逻辑实现
-*   **日期**: 2024-07-26
-*   **任务**:
-    *   创建了服务类 `Services/ProjectAnalysisService.cs` 用于封装所有的数据统计逻辑。
-    *   实现了 `AnalyzeProject(string projectPath)` 方法作为入口，统筹各项统计。
-    *   实现了 `GetDesignerVersion(string projectPath)` 方法：
-        *   读取工程根目录下的 `DocumentInfo` 文件。
-        *   使用 `Newtonsoft.Json` 解析JSON内容，提取 `VersionString`。
-        *   增加了错误处理，确保在文件不存在、无法解析或属性缺失时返回空字符串。
-    *   创建了辅助方法 `GetFolderFileStatistics(...)`：
-        *   用于统一处理基于文件夹内文件数量的统计（如页面、表、流程等）。
-        *   统计指定目录下特定后缀文件的数量。
-        *   为每个文件生成 `DetailEntry` (文件名, 大小, 文件类型)。
-        *   增加了错误处理，确保在目录不存在或读取文件出错时，数量为0。
-    *   基于 `GetFolderFileStatistics` 实现了以下统计项的逻辑：
-        *   页面数量 (`Pages/*.json`)
-        *   数据表数量 (`Tables/*.json`)
-        *   流程数量 (`Process/*.bpmn`)
-        *   报表数量 (`Reports/*.json`)
-        *   接口数量 (`ServerCommands/*.json`)
-        *   自定义插件数量 (`Plugin/*.zip`)
-        *   自定义组件数量 (`UserControlPages/*.json`)
-        *   计划任务数量 (`SchedulerTasks/*.json`)
-        *   扩展JavaScript数量 (`UserJaveScript/*.js`) - *注意：文件夹名 `UserJaveScript` 根据文档设定，待确认是否为 `UserJavaScript`。*
-    *   实现了 `GetExternalJsStatistics(string projectPath)` 和 `GetExternalCssStatistics(string projectPath)` 方法：
-        *   读取工程根目录下的 `CustomLibraries.json` 文件。
-        *   使用 `Newtonsoft.Json` 解析JSON内容。
-        *   分别统计 `UserJSFileList` 和 `UserCSSFileList` 数组成员数量。
-        *   为每个条目生成 `DetailEntry` (名称, "N/A"大小, 文件类型基于 `IsLink` 或URL判断)。
-        *   增加了错误处理，确保在文件不存在、无法解析或对应列表不存在时，数量为0。
-*   **状态**: 已完成 (需要添加 `Newtonsoft.Json` NuGet包)
+FgccHelper 提供了以下核心功能：
 
-### 4. UI逻辑与数据绑定实现
-*   **日期**: 2024-07-26
-*   **任务**:
-    *   在 `MainWindow.xaml.cs` 中：
-        *   实例化 `ProjectAnalysisService`。
-        *   实现了 `SelectFolderButton_Click` 事件：
-            *   使用 `System.Windows.Forms.FolderBrowserDialog` (需添加 `System.Windows.Forms.dll` 引用) 允许用户选择工程目录。
-            *   获取选定路径后，调用 `LoadProjectData`。
-        *   实现了 `LoadProjectData(string projectPath)` 方法：
-            *   调用 `_analysisService.AnalyzeProject` 获取统计数据。
-            *   调用 `UpdateUIWithProjectData` 更新界面。
-            *   增加了基本的错误处理和用户提示 (MessageBox)。
-            *   添加了等待光标反馈。
-        *   实现了 `UpdateUIWithProjectData(Project project)` 方法：
-            *   更新窗口标题，显示工程名和设计器版本。
-            *   清空 `StatisticsWrapPanel`，然后根据 `project.Statistics` 动态创建统计卡片 (使用 `Border` 和 `TextBlock`)。
-            *   为每个卡片设置 `Tag` 为对应的 `StatisticItem`，并附加 `MouseLeftButtonUp` 事件。
-            *   卡片UI进行了初步美化（圆角、阴影、内外边距、字体）。
-        *   实现了 `StatisticCard_MouseLeftButtonUp` 事件：
-            *   当用户点击统计卡片时，获取对应的 `StatisticItem`。
-            *   将其 `Details` 列表绑定到 `DetailsListView.ItemsSource`。
-            *   更新 `DetailsGroupBox` 的 `Header` 以显示当前查看的统计项名称和数量。
-            *   尝试自动调整 `GridView` 列宽。
-        *   实现了 `RefreshButton_Click` 事件：
-            *   重新调用 `LoadProjectData` 加载当前选定目录的数据。
-            *   处理了未选择目录时的情况。
-*   **状态**: 已完成 (需要添加 `System.Windows.Forms.dll` 引用)
+*   **工程数据统计**：
+    *   用户可以选择一个活字格工程的根目录。
+    *   自动扫描并统计工程内的多种资源数量，包括：
+        *   页面数量 
+        *   数据表数量
+        *   业务流程数量
+        *   报表数量
+        *   服务端命令（接口）数量
+        *   自定义插件数量
+        *   自定义组件数量
+        *   计划任务数量
+        *   扩展JavaScript文件数量
+        *   外部引用的JS文件数量
+        *   外部引用的CSS文件数量
+    *   自动读取并显示工程的设计器版本号。
+![image](https://github.com/user-attachments/assets/732a0648-44d1-4918-bc4c-ff524deacb3a)
 
-### 5. 后续任务与说明
-*   **测试**: 需要进行全面的功能测试，确保所有统计项准确，错误处理符合预期。
-*   **依赖**:
-    *   `Newtonsoft.Json`: 用于JSON解析，需通过NuGet包管理器添加到项目中。
-    *   `System.Windows.Forms.dll`: 用于文件夹选择对话框，需手动添加到项目引用中。
-*   **文件夹名称确认**: `UserJaveScript` 文件夹名称需要与实际活字格工程确认，如果实际为 `UserJavaScript`，需在 `ProjectAnalysisService.cs` 中进行调整。
-*   **UI美化**: 当前UI为基础实现，未来可以考虑引入WPF UI库 (如 MahApps.Metro, HandyControl) 进行深度美化。
-*   **打包与分发**: 最终目标是生成单文件绿色免安装的exe，需要配置项目的发布选项。
+*   **详细信息查看**：
+    *   主界面以卡片形式展示各项统计数据的总数。
+    *   用户可以点击任一统计项卡片，下方的列表区域会动态展示该项的详细清单。
+    *   详细清单通常包括资源的名称、文件大小、文件类型或资源类型。
+
+*   **数据刷新**：
+    *   提供"刷新"按钮，允许用户在工程文件发生变动后重新加载和分析数据。
+
+*   **导出到Excel**：
+    *   用户可以将当前分析的工程统计数据导出为一个 `.xlsx` 格式的Excel文件。
+    *   导出功能位于主菜单 "文件" -> "导出为Excel(_E)"。
+    *   Excel文件包含：
+        *   一个名为"项目概况"的Sheet，汇总显示项目名称、设计器版本以及所有统计项的名称、数量和描述。
+        *   为每个包含详细清单的统计项（如页面、数据表等）生成一个独立的Sheet，Sheet名称即为统计项名称。这些Sheet会列出该项下所有资源的名称、大小和类型。
+
+## 3. 软件特点
+
+*   **全面性**：覆盖活字格工程中多种关键资源的统计，提供较为完整的工程画像。
+*   **易用性**：直观的图形用户界面，操作简单，无需复杂配置。
+*   **详细视图**：不仅展示汇总数据，还能深入查看各项资源的具体列表。
+*   **数据便携**：支持将统计结果导出为Excel文件，方便存档、分享或进一步分析。
+*   **轻量绿色**：单个可执行文件，无需安装，解压即用。
+*   **错误兼容**：对文件或文件夹不存在、数据缺失等情况进行了兼容处理，确保程序稳定运行。
+*   **开源便捷**：提供直接访问项目源码仓库的链接，方便用户了解或参与开发。
+
+## 4. 使用教程
+
+1.  **启动软件**：
+    *   双击运行 `FgccHelper.exe` 文件启动程序。
+
+2.  **打开工程项目**：
+    FgccHelper 提供多种方式来加载您的活字格工程项目：
+
+    *   **a. 通过"选择工程目录"按钮：**
+        *   这是最直接的方式。程序启动后，点击主界面上显眼的"选择工程目录"按钮。
+        *   在弹出的标准文件夹浏览对话框中，请定位并选择您的活字格工程所在的根文件夹。
+        *   确认选择后，软件将立即开始分析该工程。
+
+    *   **b. 从"最近打开的工程"列表选择：**
+        *   如果您之前已经使用 FgccHelper 分析过某些工程，可以通过"文件"主菜单下的"最近打开(_R)"子菜单项快速访问它们。
+        *   点击列表中的某个工程路径，软件会自动加载并分析该工程。
+
+    *   **c. 从Git仓库克隆工程：**
+        *   如果您的活字格工程托管在Git仓库（例如 Gitee、GitHub），FgccHelper 也支持直接克隆并打开。
+        *   通常，这需要通过"文件"主菜单下的"从Git仓库克隆..."或类似选项来启动。
+        *   系统会提示您输入Git仓库的URL（例如 `https://gitee.com/your-username/your-project.git`）。
+        *   您可能还需要指定一个本地文件夹路径，用于存放克隆下来的工程文件。
+        *   完成输入后，软件会执行 `git clone` 操作（请确保您的系统中已正确安装并配置了Git环境，以便此功能正常工作），并将克隆到本地的工程加载进来进行分析。
+
+3.  **查看统计信息**：
+    *   分析完成后，主界面会以卡片形式展示工程的各项统计数据，如页面数量、数据表数量等。
+
+4.  **查看详细清单**：
+    *   若想查看某一统计项（例如"页面数量"）的具体清单，请直接点击对应的卡片。
+    *   主界面下方的列表视图将更新，显示该统计项内所有资源的详细信息，包括名称、大小（如适用）和类型。
+
+5.  **刷新数据**：
+    *   如果您在软件运行时修改了工程文件，可以点击主界面上的 "刷新" 按钮。软件会重新扫描并更新统计数据。
+
+6.  **导出数据到Excel**：
+    *   确保已成功加载并分析了一个工程。
+    *   点击顶部菜单栏的 "文件(F)" -> "导出为Excel(_E)"。
+    *   在弹出的文件保存对话框中，选择您希望保存Excel文件的位置，并输入文件名（默认为 `.xlsx` 格式）。
+    *   点击"保存"。软件会将当前工程的统计概况和各详细清单导出到指定的Excel文件中。
+    *   操作完成后，会有成功或失败的提示信息。
+
+7.  **查看软件信息**：
+    *   点击顶部菜单栏的 "帮助(H)" -> "关于(_A)"。
+    *   将打开"关于"窗口，您可以在此查看软件的版本等信息。
+    *   点击"Git仓库"按钮，可以用默认浏览器打开本软件在Gitee上的项目页面。
+
+---
+
+感谢您使用 FgccHelper！
 
 --- 

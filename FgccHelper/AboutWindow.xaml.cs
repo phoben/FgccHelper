@@ -17,7 +17,7 @@ namespace FgccHelper
             {
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = "https://gitee.com/cuckooent/fgcchelper",
+                    FileName = "https://github.com/phoben/FgccHelper.git",
                     UseShellExecute = true // Important for opening URLs in the default browser
                 });
             }
