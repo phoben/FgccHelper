@@ -1187,18 +1187,18 @@ namespace FgccHelper
                 }
             }
 
-            string designerVersion = _currentProject.DesignerVersion ?? "N/A"; 
-            string complexityScoreStr = _currentProject.ComplexityScore.ToString();
+            string designerVersion = _currentProject.DesignerVersion;
+            string complexityScore = _currentProject.ComplexityScore.ToString();
 
-            var submitWindow = new FgccHelper.SubmitToLeaderboardWindow(_currentProject.ProjectStats, 
-                                                             complexityScoreStr, 
-                                                             effectiveProjectName, 
-                                                             designerVersion
-                                                            )
-            {
-                Owner = this
-            };
+            SubmitToLeaderboardWindow submitWindow = new SubmitToLeaderboardWindow(
+                _currentProject.ProjectStats,
+                complexityScore,
+                effectiveProjectName,
+                designerVersion,
+                _appSettings,      // Pass the AppSettings object
+                SaveAppSettings);  // Pass the SaveAppSettings method as a callback
 
+            submitWindow.Owner = this;
             bool? dialogResult = submitWindow.ShowDialog();
 
             if (dialogResult == true)

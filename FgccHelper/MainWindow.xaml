@@ -102,7 +102,7 @@
             </Grid> <!-- End of Grid for Existing Content -->
 
             <!-- New Rank List Area in Column 1 -->
-            <GroupBox Grid.Column="1" Header="全球工程复杂度排行榜" Margin="10,0,0,0">
+            <GroupBox Grid.Column="1" Header="格友工程复杂度全球排行榜" Margin="10,0,0,0">
                 <ListView x:Name="RankingsListView" BorderThickness="1" Margin="0,8,0,0" Loaded="RankingsListView_Loaded">
                     <ListView.View>
                         <GridView>

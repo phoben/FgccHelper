@@ -17,9 +17,17 @@ namespace FgccHelper
         private string _currentDesignerVersion; // Pass from MainWindow
 
         private FgccHelper.Services.LeaderboardApiService _apiService;
+        private AppSettings _appSettings; // Added to store AppSettings
+        private Action _saveAppSettingsCallback; // Added for callback to save settings
 
-        // Constructor updated to accept more detailed project data
-        public SubmitToLeaderboardWindow(FgccHelper.Models.ProjectStatisticsContainer statsContainer, string complexityScore, string defaultProjectName, string designerVersion)
+        // Constructor updated to accept AppSettings and a save callback
+        public SubmitToLeaderboardWindow(
+            FgccHelper.Models.ProjectStatisticsContainer statsContainer,
+            string complexityScore,
+            string defaultProjectName,
+            string designerVersion,
+            AppSettings appSettings, // Added AppSettings parameter
+            Action saveAppSettingsCallback) // Added callback parameter
         {
             InitializeComponent();
             _apiService = new FgccHelper.Services.LeaderboardApiService();
@@ -28,6 +36,8 @@ namespace FgccHelper
             _currentComplexityScoreValue = complexityScore;
             _defaultProjectName = defaultProjectName;
             _currentDesignerVersion = designerVersion;
+            _appSettings = appSettings; // Store AppSettings
+            _saveAppSettingsCallback = saveAppSettingsCallback; // Store callback
 
             LoadProjectDataForDisplay();
         }
@@ -56,6 +66,13 @@ namespace FgccHelper
             TextBlockProjectStats.Text = summaryBuilder.ToString().TrimEnd();
             TextBlockComplexityScore.Text = _currentComplexityScoreValue;
             TextBoxProjectName.Text = _defaultProjectName;
+
+            // Load AuthorName and Email from AppSettings
+            if (_appSettings != null)
+            {
+                TextBoxAuthorName.Text = _appSettings.AuthorName;
+                TextBoxEmail.Text = _appSettings.Email;
+            }
         }
 
         private string GetClientVersion()
@@ -155,8 +172,16 @@ namespace FgccHelper
 
                 if (apiResponse.ErrorCode == 0)
                 {
+                    // Save AuthorName and Email to AppSettings before closing
+                    if (_appSettings != null)
+                    {
+                        _appSettings.AuthorName = TextBoxAuthorName.Text;
+                        _appSettings.Email = TextBoxEmail.Text;
+                        _saveAppSettingsCallback?.Invoke(); // Call the save callback
+                    }
+
                     MessageBox.Show(apiResponse.Message ?? "项目已成功提交到排行榜！", "提交成功", MessageBoxButton.OK, MessageBoxImage.Information);
-                    DialogResult = true;
+                    DialogResult = true; // This will also trigger an update in MainWindow if needed
                     this.Close();
                 }
                 else
