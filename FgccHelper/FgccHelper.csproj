@@ -81,6 +81,7 @@
     <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
     <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
@@ -113,10 +114,17 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Models\DetailEntry.cs" />
+    <Compile Include="Models\LeaderboardModels.cs" />
     <Compile Include="Models\Project.cs" />
+    <Compile Include="Models\ProjectStatisticsContainer.cs" />
     <Compile Include="Models\StatisticItem.cs" />
+    <Compile Include="Services\ComplexityCalculator.cs" />
     <Compile Include="Services\ExcelExportService.cs" />
+    <Compile Include="Services\LeaderboardApiService.cs" />
     <Compile Include="Services\ProjectAnalysisService.cs" />
+    <Compile Include="SubmitToLeaderboardWindow.xaml.cs">
+      <DependentUpon>SubmitToLeaderboardWindow.xaml</DependentUpon>
+    </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -153,6 +161,10 @@
       <DependentUpon>AboutWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="SubmitToLeaderboardWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">

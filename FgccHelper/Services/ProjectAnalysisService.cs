@@ -49,19 +49,54 @@ namespace FgccHelper.Services
                 DesignerVersion = GetDesignerVersion(projectPath)
             };
 
-            // 添加各项统计
-            project.Statistics.Add(GetPageStatistics(projectPath));
-            project.Statistics.Add(GetTableStatistics(projectPath));
-            project.Statistics.Add(GetProcessStatistics(projectPath));
-            project.Statistics.Add(GetReportStatistics(projectPath));
-            project.Statistics.Add(GetServerCommandStatistics(projectPath));
-            project.Statistics.Add(GetPluginStatistics(projectPath));
-            project.Statistics.Add(GetUserControlPageStatistics(projectPath));
-            project.Statistics.Add(GetSchedulerTaskStatistics(projectPath));
-            project.Statistics.Add(GetUserJavaScriptStatistics(projectPath));
-            project.Statistics.Add(GetExternalJsStatistics(projectPath));
-            project.Statistics.Add(GetExternalCssStatistics(projectPath));
+            // 获取并填充各项统计数据
+            var pageStats = GetPageStatistics(projectPath);
+            project.Statistics.Add(pageStats);
+            project.ProjectStats.PageCount = pageStats.Count;
+
+            var tableStats = GetTableStatistics(projectPath);
+            project.Statistics.Add(tableStats);
+            project.ProjectStats.TableCount = tableStats.Count;
+
+            var processStats = GetProcessStatistics(projectPath);
+            project.Statistics.Add(processStats);
+            project.ProjectStats.BusinessProcessCount = processStats.Count;
+
+            var reportStats = GetReportStatistics(projectPath);
+            project.Statistics.Add(reportStats);
+            project.ProjectStats.ReportCount = reportStats.Count;
+
+            var serverCommandStats = GetServerCommandStatistics(projectPath);
+            project.Statistics.Add(serverCommandStats);
+            project.ProjectStats.ServerCommandCount = serverCommandStats.Count;
+
+            var pluginStats = GetPluginStatistics(projectPath);
+            project.Statistics.Add(pluginStats);
+            project.ProjectStats.CustomPluginCount = pluginStats.Count;
+
+            var userControlStats = GetUserControlPageStatistics(projectPath);
+            project.Statistics.Add(userControlStats);
+            project.ProjectStats.CustomComponentCount = userControlStats.Count;
+
+            var schedulerStats = GetSchedulerTaskStatistics(projectPath);
+            project.Statistics.Add(schedulerStats);
+            project.ProjectStats.ScheduledTaskCount = schedulerStats.Count;
+
+            var userJsStats = GetUserJavaScriptStatistics(projectPath);
+            project.Statistics.Add(userJsStats);
+            project.ProjectStats.ExtendedJsFileCount = userJsStats.Count;
+
+            var externalJsStats = GetExternalJsStatistics(projectPath);
+            project.Statistics.Add(externalJsStats);
+            project.ProjectStats.ExternalJsFileCount = externalJsStats.Count;
+
+            var externalCssStats = GetExternalCssStatistics(projectPath);
+            project.Statistics.Add(externalCssStats);
+            project.ProjectStats.ExternalCssFileCount = externalCssStats.Count;
             
+            // Note: project.ComplexityScore will be calculated later in MainWindow by ComplexityCalculator
+            // project.ProjectType should be set in MainWindow where the project opening logic resides.
+
             return project;
         }
 

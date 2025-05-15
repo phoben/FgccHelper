@@ -1,5 +1,5 @@
 ﻿using FgccHelper.Models;
-using FgccHelper.Services;
+// using FgccHelper.Services; // Will fully qualify LeaderboardApiService
 using Microsoft.Win32; // For OpenFileDialog
 using System;
 using System.Collections.Generic; // Added for List<StatisticItem>
@@ -14,6 +14,9 @@ using System.Windows.Controls;
 using System.Windows.Input; 
 using System.Windows.Media; 
 using Newtonsoft.Json; // For AppSettings
+using System.Text.RegularExpressions; // Required for Git project name extraction improvement
+using System.Collections.ObjectModel;
+using FgccHelper.Services; // Added
 
 // Important: Add reference to System.Windows.Forms.dll for FolderBrowserDialog
 // In Solution Explorer: Right-click References > Add Reference > Assemblies > Framework > System.Windows.Forms
@@ -88,6 +91,8 @@ namespace FgccHelper
         public string GitUsername { get; set; }
         public string GitPassword { get; set; } // Consider encrypting this in a real app
         public List<RecentProjectEntry> RecentProjects { get; set; } = new List<RecentProjectEntry>();
+        public string AuthorName { get; set; } // User's preferred author name
+        public string Email { get; set; }      // User's preferred email
     }
 
     /// <summary>
@@ -97,11 +102,13 @@ namespace FgccHelper
     {
         private ProjectAnalysisService _analysisService;
         private ExcelExportService _excelExportService; // Added for Excel export
+        private FgccHelper.Services.LeaderboardApiService _leaderboardApiService; // Fully qualified
         private Project _currentProject;
         private string _currentProjectPath; // This will now store the actual path being analyzed (original or temp)
         private string _originalOpenedPath; // For fgcc or git, this is the fgcc file or git url
         private bool _isTempPath = false;
         private string _tempDirectoryPath = null; // Stores path to the temporary directory for .fgcc or git
+        private ObservableCollection<FgccHelper.Models.RankingEntry> _leaderboardRankings; // Fully qualified generic type
 
         private string _baseTitle = "FgccHelper";
 
@@ -113,6 +120,33 @@ namespace FgccHelper
 
         private AppSettings _appSettings;
         private readonly string _configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
+
+        // Leaderboard pagination and loading state
+        private int _currentLeaderboardPage = 1;
+        private bool _isLoadingLeaderboard = false;
+        private bool _hasMoreLeaderboardData = true;
+
+        // Helper method to find a visual child of a specific type
+        public static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            T child = default(T);
+            int numVisuals = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < numVisuals; i++)
+            {
+                Visual v = (Visual)VisualTreeHelper.GetChild(parent, i);
+                child = v as T;
+                if (child == null)
+                {
+                    child = FindVisualChild<T>(v);
+                }
+                if (child != null)
+                {
+                    break;
+                }
+            }
+            return child;
+        }
 
         private void SetMainUILoadingState(bool isLoading)
         {
@@ -130,11 +164,22 @@ namespace FgccHelper
             LoadAppSettings();
             _analysisService = new ProjectAnalysisService();
             _excelExportService = new ExcelExportService(); // Initialize the service
+            _leaderboardApiService = new FgccHelper.Services.LeaderboardApiService(); // Fully qualified instantiation
+            _leaderboardRankings = new ObservableCollection<FgccHelper.Models.RankingEntry>(); // Fully qualified generic type
+            RankingsListView.ItemsSource = _leaderboardRankings; // Bind to ListView in XAML
+
             InitializeDefaultStatisticsDisplay(); 
             UpdateRecentProjectsMenu(); // Initial population of the recent projects menu
             this.Closing += MainWindow_Closing; 
             _selectedCardBorder = null; 
             MenuExportExcel.IsEnabled = false; // Disable export if no project loaded initially
+
+            // Load leaderboard on startup
+            Loaded += async (s, e) => 
+            {
+                await RefreshLeaderboardDataAsync(isManualRefresh: true); // Changed from isInitialLoad
+                // SetupLeaderboardRefreshTimer(); // REMOVED: Timer is removed
+            };
         }
 
         private void LoadAppSettings()
@@ -161,7 +206,7 @@ namespace FgccHelper
             UpdateRecentProjectsMenu();
         }
 
-        private void SaveAppSettings()
+        public void SaveAppSettings()
         {
             try
             {
@@ -281,9 +326,14 @@ namespace FgccHelper
                                 _currentProjectPath = _tempDirectoryPath;
                                 await LoadProjectData(_currentProjectPath);
                             });
-                            if (_currentProject != null && _currentProject.ProjectName != "未选择工程") // Check if load was successful from LoadProjectData's perspective
+                            if (_currentProject != null) // Check if load was successful
                             {
-                                AddRecentProject(entry.Path, ProjectType.FgccFile);
+                                _currentProject.ProjectName = System.IO.Path.GetFileNameWithoutExtension(entry.Path); // Set ProjectName from fgcc file
+                                UpdateWindowTitle(_currentProject); // Explicitly update window title
+                                if (_currentProject.ProjectName != "未选择工程") // Additional check if still default name
+                                {
+                                   AddRecentProject(entry.Path, ProjectType.FgccFile);
+                                }
                             }
                             break;
 
@@ -410,14 +460,15 @@ namespace FgccHelper
             {
                 ProjectName = "未选择工程",
                 DesignerVersion = "N/A",
-                Statistics = GetInitialStatisticItems()
+                Statistics = new System.Collections.ObjectModel.ObservableCollection<StatisticItem>(GetInitialStatisticItems()) 
             };
             _currentProject = initialProject; 
             _currentProjectPath = null; 
             _originalOpenedPath = null;
             UpdateUIWithProjectData(initialProject, true); 
             this.Title = _baseTitle + " - 未选择工程";
-            MenuRefresh.IsEnabled = false; // Initially no project, so refresh is disabled
+            MenuRefresh.IsEnabled = false; 
+            MenuShareToLeaderboard.IsEnabled = false; // 禁用分享菜单项
             _selectedCardBorder = null; 
         }
 
@@ -470,13 +521,17 @@ namespace FgccHelper
                         ZipFile.ExtractToDirectory(fgccFilePath, _tempDirectoryPath);
                         _currentProjectPath = _tempDirectoryPath; // Set current path to the temp directory
                         
-                        // LoadProjectData is now async and handles its own UI thread marshalling for updates
                         await LoadProjectData(_currentProjectPath); 
                     });
-                    // Add to recent projects if successful (LoadProjectData within Task.Run doesn't throw leading to overall success here)
-                    if (_currentProject != null && _currentProject.ProjectName != "未选择工程")
+                    
+                    if (_currentProject != null) // After LoadProjectData completes and _currentProject is set
                     {
-                        AddRecentProject(fgccFilePath, ProjectType.FgccFile);
+                        _currentProject.ProjectName = System.IO.Path.GetFileNameWithoutExtension(fgccFilePath); // Override with fgcc file name
+                        UpdateWindowTitle(_currentProject); // Explicitly update window title
+                         if (_currentProject.ProjectName != "未选择工程") // Ensure it wasn't reset to default
+                        {
+                            AddRecentProject(fgccFilePath, ProjectType.FgccFile);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -773,6 +828,7 @@ namespace FgccHelper
             finally
             {
                 SetMainUILoadingState(false);
+                await RefreshLeaderboardDataAsync(isManualRefresh: true); // Add leaderboard refresh to manual project refresh
             }
         }
 
@@ -829,183 +885,200 @@ namespace FgccHelper
         {
             Project analysisResult = null;
             Exception analysisException = null;
+            ProjectType projectType = ProjectType.Folder; // Default
+            if (_isTempPath && !string.IsNullOrEmpty(_originalOpenedPath))
+            {
+                if (_originalOpenedPath.EndsWith(".fgcc", StringComparison.OrdinalIgnoreCase)) projectType = ProjectType.FgccFile;
+                else if (_originalOpenedPath.StartsWith("http", StringComparison.OrdinalIgnoreCase) || 
+                         _originalOpenedPath.StartsWith("git@", StringComparison.OrdinalIgnoreCase)) projectType = ProjectType.GitRepo;
+            }
 
             try
             {
-                // Perform the potentially long-running analysis on a background thread
                 analysisResult = await Task.Run(() => _analysisService.AnalyzeProject(projectPathToAnalyze));
+                if (analysisResult != null) 
+                { 
+                    analysisResult.ProjectType = projectType; // Set the project type
+                }
             }
             catch (Exception ex)
             {
-                analysisException = ex; // Capture any exception from the analysis task
+                analysisException = ex; 
             }
 
-            // Now, dispatch all UI updates and result handling to the UI thread
             Application.Current.Dispatcher.Invoke(() =>
             {
                 if (analysisException != null)
                 {
-                    // Handle exception from the analysis task
                     MessageBox.Show($"分析工程 '{Path.GetFileName(projectPathToAnalyze)}' 时发生错误: {analysisException.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                    InitializeDefaultStatisticsDisplay(); // This also updates UI, will run on UI thread.
-                    _currentProject = null; // Ensure state is clean
+                    InitializeDefaultStatisticsDisplay(); 
+                    _currentProject = null; 
                     _currentProjectPath = null;
+                     MenuShareToLeaderboard.IsEnabled = false; // 禁用分享菜单项
                 }
                 else if (analysisResult != null)
                 {
-                    // Analysis succeeded and returned a project
                     _currentProject = analysisResult;
-                    UpdateUIWithProjectData(_currentProject); // UI update
-                    MenuRefresh.IsEnabled = true;             // UI update
-                    MenuExportExcel.IsEnabled = true;       // Enable export
-
-                    if (_currentProject.Statistics != null && _currentProject.Statistics.Any())
-                    {
-                        var firstCard = StatisticsWrapPanel.Children.OfType<Border>().FirstOrDefault(); // UI access
-                        if (firstCard != null)
-                        {
-                            SelectCard(firstCard); // UI update
-                        }
-                    }
-                    else
-                    {
-                        DetailsListView.ItemsSource = null; // UI update
-                        _selectedCardBorder = null;
-                    }
+                    UpdateUIWithProjectData(_currentProject, true); 
+                    MenuRefresh.IsEnabled = true;             
+                    MenuExportExcel.IsEnabled = true;       
+                    // MenuShareToLeaderboard.IsEnabled = true; // REMOVED: Logic moved to UpdateUIWithProjectData
                 }
                 else
                 {
-                    // Analysis completed without exception, but returned null (e.g., invalid project structure)
                     MessageBox.Show("无法分析工程或工程数据为空。", "分析错误", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    InitializeDefaultStatisticsDisplay(); // UI update
-                    _currentProject = null; // Ensure consistent state if project was previously loaded
-                    MenuExportExcel.IsEnabled = false; // Disable export
+                    InitializeDefaultStatisticsDisplay(); 
+                    _currentProject = null; 
+                    MenuExportExcel.IsEnabled = false; 
+                    MenuShareToLeaderboard.IsEnabled = false; // 禁用分享菜单项
                 }
-                UpdateWindowTitle(_currentProject); // Update title in all cases on UI thread
+                UpdateWindowTitle(_currentProject); 
             });
         }
 
         private void UpdateUIWithProjectData(Project project, bool isInitialLoad = false)
         {
-            _selectedCardBorder = null; 
-            if (project == null && !isInitialLoad) return;
-            if (project == null && isInitialLoad) 
-            {
-                 project = new Project { ProjectName="Error", Statistics = GetInitialStatisticItems() };
-            }
+            SetMainUILoadingState(true); // Start loading UI state
 
-            if (!isInitialLoad) 
+            _currentProject = project;
+            MenuShareToLeaderboard.IsEnabled = false; // Default to false, enable only after successful complexity calculation > 0
+
+            if (_currentProject == null)
             {
-                 UpdateWindowTitle(project);
-            }
-            
-            StatisticsWrapPanel.Children.Clear();
-            if (!isInitialLoad) 
-            {
+                // ProjectNameTextBlock.Text = "未加载项目"; // Removed
+                // DesignerVersionTextBlock.Text = "设计器版本: --"; // Removed
+                ItemsControlStatistics.ItemsSource = null;
                 DetailsListView.ItemsSource = null;
-                DetailsGroupBox.Header = "详细信息";
-            }
-            
-
-            if (project.Statistics == null || !project.Statistics.Any())
-            {
-                var noDataLabel = new TextBlock
-                {
-                    Text = isInitialLoad ? "请选择一个工程目录开始分析。" : "没有可显示的统计数据。",
-                    Margin = new Thickness(10),
-                    Padding = new Thickness(5),
-                    FontStyle = FontStyles.Italic,
-                    HorizontalAlignment = HorizontalAlignment.Center
-                };
-                StatisticsWrapPanel.Children.Add(noDataLabel);
-                MenuRefresh.IsEnabled = false; // No data, disable refresh if this was the result of a load
-                if (!isInitialLoad) MenuExportExcel.IsEnabled = project.Statistics != null && project.Statistics.Any(); // Enable/disable based on actual data for non-initial loads
-                else MenuExportExcel.IsEnabled = false; // Always disable on initial (empty) load
+                // ProjectInfoPanel.Visibility = Visibility.Collapsed; // Removed
+                MenuExportExcel.IsEnabled = false;
+                SetMainUILoadingState(false); 
                 return;
             }
-            MenuRefresh.IsEnabled = true; // Has data, enable refresh
+            
+            // ProjectNameTextBlock.Text = string.IsNullOrWhiteSpace(_currentProject.ProjectName) ? "(未命名项目)" : _currentProject.ProjectName; // Removed
+            // DesignerVersionTextBlock.Text = string.IsNullOrWhiteSpace(_currentProject.DesignerVersion) ? "设计器版本: 未知" : $"设计器版本: {_currentProject.DesignerVersion}"; // Removed
+            // ProjectInfoPanel.Visibility = Visibility.Visible; // Removed
 
-            Border firstCard = null;
-            foreach (var statItem in project.Statistics)
+            // --- 集成复杂度计算 ---
+            const string complexityItemName = "项目复杂度"; 
+            var complexityStatItem = _currentProject.Statistics.FirstOrDefault(s => s.Name == complexityItemName);
+
+            if (isInitialLoad || complexityStatItem == null) // Always add/reset on initial load or if not present
             {
-                var cardBorder = new Border
+                if (complexityStatItem != null)
                 {
-                    BorderBrush = Brushes.LightGray,
-                    BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(6), 
-                    Padding = new Thickness(10),      
-                    Margin = new Thickness(7),        
-                    MinWidth = 190,                   
-                    MinHeight = 75,                   
-                    Background = _normalCardBackground,       
-                    Effect = new System.Windows.Media.Effects.DropShadowEffect 
+                    // 如果是刷新，并且项已存在，先移除旧的再添加新的，确保它在列表末尾或者一个可预期的位置
+                    // 或者直接更新现有项的状态
+                    complexityStatItem.Description = "计算中...";
+                    complexityStatItem.Count = 0; // Reset
+                }
+                else
+                {
+                    complexityStatItem = new StatisticItem
                     {
-                        Color = Colors.Gainsboro,
-                        Direction = 315,
-                        ShadowDepth = 2,
-                        Opacity = 0.25,
-                        BlurRadius = 4
-                    }
-                };
-                
-                var mainStackPanel = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-
-                var nameTextBlock = new TextBlock
-                {
-                    Text = statItem.Name,
-                    FontWeight = FontWeights.Normal, 
-                    FontSize = 14, 
-                    ToolTip = statItem.Description,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    Margin = new Thickness(0,0,0,3) 
-                };
-
-                var countTextBlock = new TextBlock
-                {
-                    Text = statItem.Count.ToString(),
-                    FontSize = 22, 
-                    FontWeight = FontWeights.SemiBold, 
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Foreground = Brushes.DarkSlateGray 
-                };
-                
-                mainStackPanel.Children.Add(nameTextBlock);
-                mainStackPanel.Children.Add(countTextBlock);
-                cardBorder.Child = mainStackPanel;
-                cardBorder.Tag = statItem;
-                
-                cardBorder.MouseEnter += Card_MouseEnter;
-                cardBorder.MouseLeave += Card_MouseLeave;
-                cardBorder.MouseLeftButtonUp += StatisticCard_MouseLeftButtonUp;
-
-                StatisticsWrapPanel.Children.Add(cardBorder);
-                if (firstCard == null) firstCard = cardBorder;
-            }
-
-            if (!isInitialLoad && firstCard != null)
-            {
-                SelectCard(firstCard);
-                if (firstCard.Tag is StatisticItem firstStatItem)
-                {
-                     DetailsGroupBox.Header = $"详细信息 - {firstStatItem.Name} ({firstStatItem.Count} 项)";
-                     DetailsListView.ItemsSource = firstStatItem.Details;
+                        Name = complexityItemName,
+                        Count = 0, 
+                        Description = "计算中..." 
+                    };
+                    // 将复杂度项添加到列表的末尾，或者一个合适的位置
+                    // 如果希望它在特定位置，需要更复杂的插入逻辑
+                    _currentProject.Statistics.Add(complexityStatItem);
                 }
             }
+            else // For refresh, just update existing item to "Calculating..."
+            {
+                 complexityStatItem.Description = "计算中...";
+                 complexityStatItem.Count = 0; // Reset
+            }
+            
+            // 现在绑定 ItemsSource。由于 Statistics 是 ObservableCollection，
+            // 之后对 complexityStatItem 属性的更改会通过 INotifyPropertyChanged 更新UI。
+            // 如果 ItemsControlStatistics 在 XAML 中已绑定到 _currentProject.Statistics，则此行可能不需要显式调用，
+            // 但为了确保，特别是在 isInitialLoad 时，可以设置。
+            // 如果_currentProject本身是INotifyPropertyChanged并且Statistics属性触发了通知，则更好。
+            // 但我们已经将Statistics改为了ObservableCollection，所以对集合的Add/Remove会通知，
+            // 对StatisticItem内部属性的更改会通过StatisticItem的INotifyPropertyChanged通知。
+            ItemsControlStatistics.ItemsSource = _currentProject.Statistics;
+
+
+            if (_currentProject.Statistics.Any())
+            {
+                // 尝试选中第一个卡片（如果之前没有选中的话）
+                // 或者，如果之前有选中的卡片，并且刷新后该卡片依然存在，则尝试恢复选中
+                // 为了简单起见，这里默认不自动选中，或者选中第一个
+                if (ItemsControlStatistics.Items.Count > 0 && _selectedCardBorder == null)
+                {
+                    // This logic might need adjustment based on how cards are generated and accessed
+                    // SelectCard(ItemsControlStatistics.Items[0] as Border); // Example, likely needs refinement
+                }
+                DetailsListView.ItemsSource = null; // Clear details initially
+                LabelNoDetails.Visibility = Visibility.Visible;
+                LabelNoDetails.Text = "请选择一个统计卡片查看详细信息";
+            }
+            else
+            {
+                DetailsListView.ItemsSource = null;
+                LabelNoDetails.Visibility = Visibility.Visible;
+                LabelNoDetails.Text = "当前项目无统计信息";
+            }
+            
+            UpdateWindowTitle(_currentProject);
+            MenuExportExcel.IsEnabled = _currentProject != null && _currentProject.Statistics.Any();
+            
+            Dispatcher.InvokeAsync(async () => {
+                SetMainUILoadingState(false); 
+
+                var itemToUpdate = _currentProject.Statistics.FirstOrDefault(s => s.Name == complexityItemName);
+
+                if (itemToUpdate != null)
+                {
+                    try
+                    {
+                        int score = await Services.ComplexityCalculator.CalculateComplexityAsync(_currentProject);
+                        itemToUpdate.Count = score;
+                        _currentProject.ComplexityScore = score; //确保更新 Project 对象自身的复杂度评分
+                        itemToUpdate.Description = $"综合评分"; 
+                        if (_currentProject.ComplexityScore > 0)
+                        {
+                            MenuShareToLeaderboard.IsEnabled = true;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (itemToUpdate != null) 
+                        {                            
+                            itemToUpdate.Description = "计算失败!";
+                            itemToUpdate.Count = -1; 
+                            _currentProject.ComplexityScore = -1; // 也更新 Project 对象的评分以反映失败
+                        }
+                        MessageBox.Show($"计算项目复杂度时发生错误: {ex.Message}", "复杂度计算失败", MessageBoxButton.OK, MessageBoxImage.Error);
+                        Console.WriteLine($"Complexity calculation error: {ex.Message}");
+                    }
+                }
+            });
         }
 
         private void Card_MouseEnter(object sender, MouseEventArgs e)
         {
-            if (sender is Border card && card != _selectedCardBorder)
+            if (sender is ContentPresenter cp)
             {
-                card.Background = _hoverCardBackground;
+                Border cardBorder = FindVisualChild<Border>(cp);
+                if (cardBorder != null && cardBorder != _selectedCardBorder)
+                {
+                    cardBorder.Background = _hoverCardBackground;
+                }
             }
         }
 
         private void Card_MouseLeave(object sender, MouseEventArgs e)
         {
-            if (sender is Border card && card != _selectedCardBorder)
+            if (sender is ContentPresenter cp)
             {
-                card.Background = _normalCardBackground;
+                Border cardBorder = FindVisualChild<Border>(cp);
+                if (cardBorder != null && cardBorder != _selectedCardBorder)
+                {
+                    cardBorder.Background = _normalCardBackground;
+                }
             }
         }
         
@@ -1025,11 +1098,16 @@ namespace FgccHelper
 
         private void StatisticCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (sender is Border card && card.Tag is StatisticItem statItem)
+            if (sender is ContentPresenter cp && cp.Content is StatisticItem statItem)
             {
-                SelectCard(card);
-                DetailsGroupBox.Header = $"详细信息 - {statItem.Name} ({statItem.Count} 项)";
-                DetailsListView.ItemsSource = statItem.Details;
+                Border cardBorder = FindVisualChild<Border>(cp);
+                if (cardBorder != null)
+                {
+                    SelectCard(cardBorder);
+                    DetailsGroupBox.Header = $"详细信息 - {statItem.Name} ({statItem.Count} 项)";
+                    DetailsListView.ItemsSource = statItem.Details;
+                    LabelNoDetails.Visibility = statItem.Details.Any() ? Visibility.Collapsed : Visibility.Visible;
+                }
             }
         }
 
@@ -1064,6 +1142,225 @@ namespace FgccHelper
                     SetMainUILoadingState(false);
                 }
             }
+        }
+
+        private async void MenuShareToLeaderboard_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentProject == null || _currentProject.ProjectStats == null) 
+            {
+                MessageBox.Show("请先打开并成功分析一个活字格工程，然后再尝试分享。\n(工程统计数据 ProjectStats 未找到)", "无工程数据", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            string effectiveProjectName = string.Empty;
+
+            // Priority 1: Use ProjectName from analysis if valid
+            if (!string.IsNullOrEmpty(_currentProject.ProjectName) && _currentProject.ProjectName != "未选择工程")
+            {
+                effectiveProjectName = _currentProject.ProjectName;
+            }
+            else // Fallback logic if ProjectName from analysis is not suitable
+            {
+                if (_currentProject.ProjectType == FgccHelper.ProjectType.GitRepo && !string.IsNullOrEmpty(_originalOpenedPath))
+                {
+                    try
+                    {
+                        Uri uri = new Uri(_originalOpenedPath);
+                        string repoNameFromUri = uri.Segments.LastOrDefault()?.TrimEnd('/');
+                        if (repoNameFromUri != null && repoNameFromUri.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+                        {
+                            repoNameFromUri = repoNameFromUri.Substring(0, repoNameFromUri.Length - 4);
+                        }
+                        if (!string.IsNullOrWhiteSpace(repoNameFromUri)) effectiveProjectName = repoNameFromUri;
+                    }
+                    catch 
+                    { 
+                        // If URI parsing fails or repoNameFromUri is empty, try from _currentProjectPath next
+                    }
+                }
+
+                // If still empty (e.g., not Git or Git name extraction failed), try from current project path (could be temp path)
+                if (string.IsNullOrEmpty(effectiveProjectName) && !string.IsNullOrEmpty(_currentProjectPath))
+                {
+                    try { effectiveProjectName = new DirectoryInfo(_currentProjectPath).Name; }
+                    catch { effectiveProjectName = System.IO.Path.GetFileNameWithoutExtension(_currentProjectPath); }
+                }
+            }
+
+            string designerVersion = _currentProject.DesignerVersion ?? "N/A"; 
+            string complexityScoreStr = _currentProject.ComplexityScore.ToString();
+
+            var submitWindow = new FgccHelper.SubmitToLeaderboardWindow(_currentProject.ProjectStats, 
+                                                             complexityScoreStr, 
+                                                             effectiveProjectName, 
+                                                             designerVersion
+                                                            )
+            {
+                Owner = this
+            };
+
+            bool? dialogResult = submitWindow.ShowDialog();
+
+            if (dialogResult == true)
+            {
+                await RefreshLeaderboardDataAsync(isManualRefresh: true); // Refresh after submission
+            }
+        }
+
+        private async Task RefreshLeaderboardDataAsync(bool isManualRefresh = false)
+        {
+            if (_isLoadingLeaderboard) return;
+            if (!isManualRefresh && !_hasMoreLeaderboardData) return;
+
+            _isLoadingLeaderboard = true;
+            RankingEntry loadingIndicator = null;
+
+            if (isManualRefresh)
+            {
+                _currentLeaderboardPage = 1;
+                _hasMoreLeaderboardData = true;
+                _leaderboardRankings.Clear();
+                // Optional: Add a temporary loading item for manual refresh
+                loadingIndicator = new FgccHelper.Models.RankingEntry { Rank = 0, ProjectName = "正在刷新排行榜...", ComplexityScore = 0, Author = "-", DominanceDuration = 0 };
+                _leaderboardRankings.Add(loadingIndicator);
+            }
+            else if (_hasMoreLeaderboardData) // For scroll-loading, add indicator if not manual refresh
+            {
+                 loadingIndicator = new FgccHelper.Models.RankingEntry { Rank = 0, ProjectName = "加载更多...", ComplexityScore = 0, Author = "-", DominanceDuration = 0 };
+                _leaderboardRankings.Add(loadingIndicator); // Add indicator for append
+            }
+
+            try
+            {
+                FgccHelper.Models.GetLeaderboardApiResponse response = await _leaderboardApiService.GetLeaderboardAsync(page: _currentLeaderboardPage);
+
+                if (loadingIndicator != null && _leaderboardRankings.Contains(loadingIndicator))
+                {
+                    _leaderboardRankings.Remove(loadingIndicator); // Remove indicator before adding new items or final message
+                }
+                if (isManualRefresh && response.ErrorCode == 0) // Clear again if manual refresh and successful, to remove potential "loading" message added before try block if not using indicator.
+                {
+                     // If not using the indicator for manual refresh, ensure list is clear.
+                     // With indicator, it's already removed.
+                     // If manual refresh, we start with a clean slate before adding new items.
+                     // This was: _leaderboardRankings.Clear(); -- but this is already done before the try if using an indicator and isManualRefresh
+                     // If manual refresh, we want ONLY the new data or "no data" message.
+                    if(_leaderboardRankings.Any() && isManualRefresh) _leaderboardRankings.Clear();
+
+
+                }
+
+
+                if (response.ErrorCode == 0 && response.Data != null)
+                {
+                    if (response.Data.Any())
+                    {
+                        int currentMaxRank = 0;
+                        if (!isManualRefresh && _leaderboardRankings.Any())
+                        {
+                            currentMaxRank = _leaderboardRankings.Max(r => r.Rank);
+                        }
+                        
+                        foreach (var entry in response.Data)
+                        {
+                            // If server provides rank, use it. Otherwise, assign client-side.
+                            // For append, Rank should be relative to existing items or server should handle absolute rank.
+                            // For now, if rank is 0, and we are appending, continue from last known rank.
+                            if (entry.Rank == 0) 
+                            {
+                                if (isManualRefresh) entry.Rank = _leaderboardRankings.Count + 1; // Simple incremental rank for manual refresh
+                                else entry.Rank = currentMaxRank + (_leaderboardRankings.Count(r=>r!=loadingIndicator) - _leaderboardRankings.IndexOf(entry) +1); //This logic needs to be robust
+                                // A simpler way for append is just to add and let server handle ranks, or have client re-number all if needed.
+                                // For now, let's assume server provides ranks or client simple appends.
+                                // If server gives rank 0, assign based on current count for simplicity for now.
+                                entry.Rank = _leaderboardRankings.Count +1;
+
+
+                            }
+                            _leaderboardRankings.Add(entry);
+                        }
+                        _currentLeaderboardPage++;
+                        _hasMoreLeaderboardData = response.Data.Count == 20; // Assuming 20 items per page
+                    }
+                    else // No data in response.Data
+                    {
+                        _hasMoreLeaderboardData = false;
+                        if (_currentLeaderboardPage == 1 && isManualRefresh) // Only show "No data" if it's the first page of a manual refresh
+                        {
+                            _leaderboardRankings.Add(new FgccHelper.Models.RankingEntry { Rank = 0, ProjectName = "排行榜暂无数据", ComplexityScore = 0, Author = "-", DominanceDuration = 0 });
+                        }
+                    }
+                }
+                else // API error or null data
+                {
+                    _hasMoreLeaderboardData = false;
+                    if (isManualRefresh || !_leaderboardRankings.Any()) // Show error if manual refresh or list is empty
+                    {
+                         _leaderboardRankings.Clear(); // Clear previous items on error for manual refresh
+                        string errorMessage = string.IsNullOrWhiteSpace(response.Message) ? "获取排行榜失败，请稍后重试。" : response.Message;
+                        _leaderboardRankings.Add(new FgccHelper.Models.RankingEntry { Rank = 0, ProjectName = errorMessage, ComplexityScore = 0, Author = "-", DominanceDuration = 0 });
+                    }
+                    // Optionally, show a non-blocking message for scroll-load errors if list already has items
+                    // else if (!isManualRefresh) { /* Maybe a toast or status bar message */ }
+                    Debug.WriteLine($"Leaderboard load failed: {response.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                 if (loadingIndicator != null && _leaderboardRankings.Contains(loadingIndicator))
+                {
+                    _leaderboardRankings.Remove(loadingIndicator);
+                }
+                _hasMoreLeaderboardData = false;
+                if (isManualRefresh || !_leaderboardRankings.Any())
+                {
+                    _leaderboardRankings.Clear();
+                    _leaderboardRankings.Add(new FgccHelper.Models.RankingEntry { Rank = 0, ProjectName = $"获取排行榜时发生意外错误。", ComplexityScore = 0, Author = "-", DominanceDuration = 0 });
+                }
+                MessageBox.Show($"获取排行榜数据时发生连接或意外错误: {ex.Message}", "严重错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                Debug.WriteLine($"Exception during RefreshLeaderboardDataAsync: {ex.Message}");
+            }
+            finally
+            {
+                _isLoadingLeaderboard = false;
+                if (loadingIndicator != null && _leaderboardRankings.Contains(loadingIndicator)) // Ensure indicator is removed in all cases
+                {
+                    _leaderboardRankings.Remove(loadingIndicator);
+                }
+            }
+        }
+        
+        private void DetailsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
+        }
+
+        private void RankingsListView_Loaded(object sender, RoutedEventArgs e)
+        {
+            var scrollViewer = FindVisualChild<ScrollViewer>(RankingsListView);
+            if (scrollViewer != null)
+            {
+                scrollViewer.ScrollChanged += RankingsListView_ScrollChanged;
+            }
+        }
+
+        private async void RankingsListView_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            var scrollViewer = sender as ScrollViewer;
+            // Check if scrolled to near the bottom, not currently loading, and more data might be available
+            if (scrollViewer != null && e.VerticalChange > 0 && // Ensure it's a downward scroll or content height changed
+                e.VerticalOffset >= scrollViewer.ScrollableHeight - 100 && // Near the bottom (100 is a threshold)
+                !_isLoadingLeaderboard && 
+                _hasMoreLeaderboardData)
+            {
+                Debug.WriteLine("Scrolled to bottom, attempting to load more leaderboard data.");
+                await RefreshLeaderboardDataAsync(isManualRefresh: false);
+            }
+        }
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }

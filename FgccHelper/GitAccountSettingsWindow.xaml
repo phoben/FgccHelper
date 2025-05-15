@@ -21,16 +21,16 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="用户名:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-        <TextBox Grid.Row="0" Grid.Column="1" x:Name="UsernameTextBox" VerticalAlignment="Center" Margin="0,5"/>
+        <TextBox Grid.Row="0" Grid.Column="1" x:Name="UsernameTextBox" VerticalAlignment="Center" Margin="0,5" Height="24"/>
 
         <TextBlock Grid.Row="1" Grid.Column="0" Text="密码/Token:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-        <PasswordBox Grid.Row="1" Grid.Column="1" x:Name="PasswordBox" VerticalAlignment="Center" Margin="0,5"/>
+        <PasswordBox Grid.Row="1" Grid.Column="1" x:Name="PasswordBox" VerticalAlignment="Center" Margin="0,5" Height="24"/>
 
         <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="此配置将用于后续的Git操作。" FontSize="10" Margin="0,10,0,10" TextWrapping="Wrap"/>
 
         <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button x:Name="SaveButton" Content="保存" Width="80" Margin="0,0,10,0" Click="SaveButton_Click" IsDefault="True"/>
-            <Button Content="取消" Width="80" IsCancel="True"/>
+            <Button x:Name="SaveButton" Content="保存" Width="80" Margin="0,0,10,0" Click="SaveButton_Click" IsDefault="True" Height="24"/>
+            <Button Content="取消" Width="80" IsCancel="True" Height="24"/>
         </StackPanel>
     </Grid>
 </Window> 
