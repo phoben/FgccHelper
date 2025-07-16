@@ -1,4 +1,4 @@
-﻿using FgccHelper.Models;
+using FgccHelper.Models;
 // using FgccHelper.Services; // Will fully qualify LeaderboardApiService
 using Microsoft.Win32; // For OpenFileDialog
 using System;
@@ -1280,7 +1280,7 @@ namespace FgccHelper
                             _leaderboardRankings.Add(entry);
                         }
                         _currentLeaderboardPage++;
-                        _hasMoreLeaderboardData = response.Data.Count == 20; // Assuming 20 items per page
+                        _hasMoreLeaderboardData = response.Data.Count == 100; // Assuming 100 items per page
                     }
                     else // No data in response.Data
                     {
@@ -1337,7 +1337,11 @@ namespace FgccHelper
 
         private void RankingsListView_Loaded(object sender, RoutedEventArgs e)
         {
-            var scrollViewer = FindVisualChild<ScrollViewer>(RankingsListView);
+            var itemsControl = sender as ItemsControl;
+            if (itemsControl == null) return;
+
+            // The ItemsControl is inside a ScrollViewer, so we get its parent.
+            var scrollViewer = VisualTreeHelper.GetParent(itemsControl) as ScrollViewer;
             if (scrollViewer != null)
             {
                 scrollViewer.ScrollChanged += RankingsListView_ScrollChanged;

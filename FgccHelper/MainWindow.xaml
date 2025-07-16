@@ -23,6 +23,88 @@
                 </StackPanel>
             </Border>
         </DataTemplate>
+
+        <!-- DataTemplate for RankingItem -->
+        <DataTemplate x:Key="RankingItemCardTemplate">
+            <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="8" Padding="15" Margin="5,8" Background="White">
+                <Border.Effect>
+                    <DropShadowEffect Color="#E0E0E0" Direction="270" ShadowDepth="1" Opacity="0.3" BlurRadius="3"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Rank -->
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Rank}" FontSize="28" FontWeight="Bold" Foreground="#4A90E2" VerticalAlignment="Top" Margin="0,0,15,0"/>
+
+                    <Grid Grid.Row="0" Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Top row with Project Name and Score -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Project Name -->
+                            <TextBlock Grid.Column="0" Text="{Binding ProjectName}" FontSize="18" FontWeight="SemiBold" Foreground="#333" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+
+                            <!-- Complexity Score -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <TextBlock Text="{Binding ComplexityScore}" FontSize="16" FontWeight="Bold" Foreground="#D0021B" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Description -->
+                        <TextBlock Grid.Row="1" FontStyle="Italic" Foreground="#666" TextWrapping="Wrap" Margin="0,5,0,8">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="{Binding Description}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Description}" Value="">
+                                            <Setter Property="Text" Value="作者很懒，一个字都不愿意写..."/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Description}" Value="{x:Null}">
+                                            <Setter Property="Text" Value="作者很懒，一个字都不愿意写..."/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+
+                    <!-- Separator -->
+                    <Separator Grid.Row="1" Grid.ColumnSpan="2" Margin="0,10"/>
+
+                    <!-- Other Details -->
+                    <StackPanel Grid.Row="2" Grid.ColumnSpan="2">
+                        
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock FontSize="12" Foreground="#777"><Run Text="作者: "/><Run Text="{Binding Author}" FontWeight="SemiBold"/></TextBlock>
+                                <TextBlock FontSize="12" Foreground="#777" Margin="0,3,0,0"><Run Text="邮箱: "/><Run Text="{Binding Email}"/></TextBlock>
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" FontSize="12" Foreground="#777" HorizontalAlignment="Right" VerticalAlignment="Bottom"><Run Text="{Binding DominanceDurationText, Mode=OneWay}" FontWeight="SemiBold"/></TextBlock>
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </Window.Resources>
     <Grid Margin="15">
         <Grid.RowDefinitions>
@@ -105,34 +187,28 @@
 
             <!-- New Rank List Area in Column 1 -->
             <GroupBox Grid.Column="1" Header="格友工程复杂度全球排行榜" Margin="10,0,0,0">
-                <ListView x:Name="RankingsListView" BorderThickness="1" Margin="0,8,0,0" Loaded="RankingsListView_Loaded">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="排名" DisplayMemberBinding="{Binding Rank}" Width="40"/>
-                            <GridViewColumn Header="项目" DisplayMemberBinding="{Binding ProjectName}" Width="120"/>
-                            <GridViewColumn Header="项目介绍" DisplayMemberBinding="{Binding Description}" Width="150"/>
-                            <GridViewColumn Header="作者" DisplayMemberBinding="{Binding Author}" Width="100"/>
-                            <GridViewColumn Header="复杂度" DisplayMemberBinding="{Binding ComplexityScore}" Width="80"/>
-                            <GridViewColumn Header="霸榜天数" DisplayMemberBinding="{Binding DominanceDurationText}" Width="100"/>
-                            <GridViewColumn Header="邮箱" DisplayMemberBinding="{Binding Email}" Width="150"/>
-                        </GridView>
-                    </ListView.View>
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="ListViewItem">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Rank}" Value="1">
-                                    <Setter Property="Foreground" Value="Red"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Rank}" Value="2">
-                                    <Setter Property="Foreground" Value="Blue"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Rank}" Value="3">
-                                    <Setter Property="Foreground" Value="Green"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ListView.ItemContainerStyle>
-                </ListView>
+                <GroupBox.Style>
+                    <Style TargetType="GroupBox">
+                        <Setter Property="HeaderTemplate">
+                            <Setter.Value>
+                                <DataTemplate>
+                                    <Grid>
+                                        <TextBlock Text="{Binding}" FontSize="16" FontWeight="Bold" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </GroupBox.Style>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="RankingsListView" ItemTemplate="{StaticResource RankingItemCardTemplate}" Loaded="RankingsListView_Loaded">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel IsItemsHost="True"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </ScrollViewer>
             </GroupBox>
         </Grid>
 
