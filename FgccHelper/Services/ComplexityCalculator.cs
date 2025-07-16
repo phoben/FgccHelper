@@ -20,15 +20,15 @@ namespace FgccHelper.Services
             // 从 project.Statistics 中提取各项数据
             double P = project.Statistics.FirstOrDefault(s => s.Name == "页面数量")?.Count ?? 0;
             double T = project.Statistics.FirstOrDefault(s => s.Name == "数据表数量")?.Count ?? 0;
-            double B = project.Statistics.FirstOrDefault(s => s.Name == "业务流程数量")?.Count ?? 0;
+            double B = project.Statistics.FirstOrDefault(s => s.Name == "流程数量")?.Count ?? 0;
             double R = project.Statistics.FirstOrDefault(s => s.Name == "报表数量")?.Count ?? 0;
             double S = project.Statistics.FirstOrDefault(s => s.Name == "服务端命令")?.Count ?? 0;
             double CP = project.Statistics.FirstOrDefault(s => s.Name == "自定义插件数量")?.Count ?? 0;
             double CC = project.Statistics.FirstOrDefault(s => s.Name == "自定义组件数量")?.Count ?? 0;
             double ST = project.Statistics.FirstOrDefault(s => s.Name == "计划任务数量")?.Count ?? 0;
-            double EJ = project.Statistics.FirstOrDefault(s => s.Name == "扩展JavaScript文件数量")?.Count ?? 0;
-            double XJ = project.Statistics.FirstOrDefault(s => s.Name == "外部引用的JS文件数量")?.Count ?? 0;
-            double XC = project.Statistics.FirstOrDefault(s => s.Name == "外部引用的CSS文件数量")?.Count ?? 0;
+            double EJ = project.Statistics.FirstOrDefault(s => s.Name == "扩展JavaScript数量")?.Count ?? 0;
+            double XJ = project.Statistics.FirstOrDefault(s => s.Name == "外部JS文件数量")?.Count ?? 0;
+            double XC = project.Statistics.FirstOrDefault(s => s.Name == "外部CSS文件数量")?.Count ?? 0;
 
             // 基础权重
             double W_P = 5;
@@ -44,8 +44,8 @@ namespace FgccHelper.Services
             double W_XC = 0.5;
 
             // 交互权重
-            double W_BT_Interaction = 0.1;
-            double W_PCustom_Interaction = 0.05;
+            double W_BT_Interaction = 0.1; //业务流程与数据表交互
+            double W_PCustom_Interaction = 0.05; // 新增：页面与自定义插件交互
             double W_ST_Interaction = 0.08;  // 新增：服务端命令与数据表交互
             double W_BCP_Interaction = 0.07; // 新增：业务流程与自定义插件交互
 

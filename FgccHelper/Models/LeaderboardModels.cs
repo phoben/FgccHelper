@@ -126,6 +126,9 @@ namespace FgccHelper.Models // Assuming models are in FgccHelper.Models namespac
 
         [JsonProperty("message")]
         public string Message { get; set; }
-        // Potentially other fields if the API returns more on submission.
+
+        [JsonProperty("complexityScore")]
+        public string ComplexityScore { get; set; }
+
     }
 } 

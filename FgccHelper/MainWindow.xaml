@@ -38,13 +38,15 @@
                 <MenuItem x:Name="MenuOpenGitProject" Header="打开Git项目(_G)" Click="MenuOpenGitProject_Click"/>
                 <MenuItem x:Name="MenuRecentProjects" Header="最近打开(_R)" />
                 <MenuItem x:Name="MenuExportExcel" Header="导出为Excel(_E)" Click="MenuExportExcel_Click" IsEnabled="False"/>
-                <MenuItem x:Name="MenuShareToLeaderboard" Header="分享至排行榜(_S)" Click="MenuShareToLeaderboard_Click"/>
                 <Separator />
                 <MenuItem x:Name="MenuExit" Header="退出(_X)" Click="MenuExit_Click"/>
             </MenuItem>
             <MenuItem Header="选项(_P)">
                 <MenuItem x:Name="MenuGitAccountSettings" Header="Git账户配置(_C)" Click="MenuGitAccountSettings_Click"/>
                 <MenuItem x:Name="MenuRefresh" Header="刷新(_S)" Click="MenuRefresh_Click" IsEnabled="False"/>
+            </MenuItem>
+            <MenuItem Header="分享(_S)">
+                <MenuItem x:Name="MenuShareToLeaderboard" Header="提交至排行榜(_L)" Click="MenuShareToLeaderboard_Click"/>
             </MenuItem>
             <MenuItem Header="帮助(_H)">
                 <MenuItem x:Name="MenuAbout" Header="关于(_A)" Click="MenuAbout_Click"/>

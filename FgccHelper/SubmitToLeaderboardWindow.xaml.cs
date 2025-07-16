@@ -139,7 +139,7 @@ namespace FgccHelper
                 ButtonSubmit.Content = "提交到排行榜";
                 return;
             }
-            
+
             int.TryParse(_currentComplexityScoreValue, out int complexityScoreInt);
 
             var submissionRequest = new FgccHelper.Models.RankingSubmissionRequest
@@ -149,7 +149,7 @@ namespace FgccHelper
                 Description = TextBoxProjectDescription.Text,
                 Email = TextBoxEmail.Text,
                 ComplexityScore = complexityScoreInt,
-                
+
                 PageCount = _projectStatisticsContainer.PageCount,
                 TableCount = _projectStatisticsContainer.TableCount,
                 BusinessProcessCount = _projectStatisticsContainer.BusinessProcessCount,
@@ -161,7 +161,7 @@ namespace FgccHelper
                 ExtendedJsFileCount = _projectStatisticsContainer.ExtendedJsFileCount,
                 ExternalJsFileCount = _projectStatisticsContainer.ExternalJsFileCount,
                 ExternalCssFileCount = _projectStatisticsContainer.ExternalCssFileCount,
-                
+
                 ClientVersion = GetClientVersion(),
                 DesignerVersion = _currentDesignerVersion ?? "unknown"
             };
@@ -180,7 +180,7 @@ namespace FgccHelper
                         _saveAppSettingsCallback?.Invoke(); // Call the save callback
                     }
 
-                    MessageBox.Show(apiResponse.Message ?? "项目已成功提交到排行榜！", "提交成功", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show((apiResponse.Message ?? "项目已成功提交到排行榜！") + "\n" + "复杂度评分：" + apiResponse.ComplexityScore, "提交成功", MessageBoxButton.OK, MessageBoxImage.Information);
                     DialogResult = true; // This will also trigger an update in MainWindow if needed
                     this.Close();
                 }
@@ -210,4 +210,4 @@ namespace FgccHelper
 
         }
     }
-} 
+}

@@ -42,7 +42,7 @@ namespace FgccHelper.Services
             {
                 Console.WriteLine("API not configured or using placeholder. Simulating successful submission.");
                 await Task.Delay(500); 
-                return new SubmitRankingApiResponse { ErrorCode = 0, Message = "提交成功" };
+                return new SubmitRankingApiResponse { ErrorCode = 0, Message = "提交成功，复杂度得分：" };
             }
 
             string apiUrl = $"{_apiBaseUrl.TrimEnd('/')}/submitrankings";
