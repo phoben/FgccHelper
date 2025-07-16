@@ -443,7 +443,7 @@ namespace FgccHelper
                 new StatisticItem { Name = "数据表数量", Description = "工程中所有数据表的总数量", Count = 0, Details = new List<DetailEntry>() },
                 new StatisticItem { Name = "流程数量", Description = "工程中所有业务流程的总数量", Count = 0, Details = new List<DetailEntry>() },
                 new StatisticItem { Name = "报表数量", Description = "工程中所有报表的总数量", Count = 0, Details = new List<DetailEntry>() },
-                new StatisticItem { Name = "接口数量", Description = "工程中所有服务端命令（接口）的总数量", Count = 0, Details = new List<DetailEntry>() },
+                new StatisticItem { Name = "服务端命令", Description = "工程中所有服务端命令（接口）的总数量", Count = 0, Details = new List<DetailEntry>() },
                 new StatisticItem { Name = "自定义插件数量", Description = "工程中所有自定义插件 (.zip) 的总数量", Count = 0, Details = new List<DetailEntry>() },
                 new StatisticItem { Name = "自定义组件数量", Description = "工程中所有自定义组件 (.json) 的总数量", Count = 0, Details = new List<DetailEntry>() },
                 new StatisticItem { Name = "计划任务数量", Description = "工程中所有计划任务的总数量", Count = 0, Details = new List<DetailEntry>() },

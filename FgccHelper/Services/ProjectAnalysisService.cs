@@ -231,7 +231,7 @@ namespace FgccHelper.Services
 
         private StatisticItem GetServerCommandStatistics(string projectPath)
         {
-            return GetFolderFileStatistics(projectPath, "ServerCommands", "json", "接口数量", "工程中所有服务端命令（接口）的总数量");
+            return GetFolderFileStatistics(projectPath, "ServerCommands", "json", "服务端命令", "工程中所有服务端命令（接口）的总数量");
         }
         
         private StatisticItem GetPluginStatistics(string projectPath)
