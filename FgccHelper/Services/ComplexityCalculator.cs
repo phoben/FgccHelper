@@ -40,26 +40,26 @@ namespace FgccHelper.Services
             double W_CC = 6;
             double W_ST = 4;
             double W_EJ = 3;
-            double W_XJ = 0.5;
-            double W_XC = 0.5;
+            double W_XJ = 1;
+            double W_XC = 1;
 
             // 交互权重
             double W_BT_Interaction = 0.1; //业务流程与数据表交互
-            double W_PCustom_Interaction = 0.05; // 新增：页面与自定义插件交互
-            double W_ST_Interaction = 0.08;  // 新增：服务端命令与数据表交互
-            double W_BCP_Interaction = 0.07; // 新增：业务流程与自定义插件交互
+            double W_PCustom_Interaction = 0.05; // 页面与自定义插件交互
+            double W_ST_Interaction = 0.08;  // 服务端命令与数据表交互
+            double W_SB_Interaction = 0.07; // 业务流程与服务端命令
 
             // 计算项目总规模用于归一化
             double totalElements = P + T + B + R + S + CP + CC + ST + EJ + XJ + XC;
             double scaleFactor = totalElements > 0 ? Math.Sqrt(totalElements) / 10 : 1;
 
             // 对异常高值应用非线性转换，避免单一指标过度影响复杂度
-            P = TransformValue(P, 50);
-            T = TransformValue(T, 30);
-            B = TransformValue(B, 25);
-            S = TransformValue(S, 40);
-            CP = TransformValue(CP, 20);
-            CC = TransformValue(CC, 30);
+            P = TransformValue(P, 300);
+            T = TransformValue(T, 170);
+            B = TransformValue(B, 10);
+            S = TransformValue(S, 100);
+            CP = TransformValue(CP, 30);
+            CC = TransformValue(CC, 50);
 
             // 基础复杂度计算（考虑边际递减效应）
             double baseComplexity =
@@ -77,10 +77,10 @@ namespace FgccHelper.Services
 
             // 交互复杂度计算（增强交互模型）
             double interactionComplexity =
-                (B * T * W_BT_Interaction) +
-                (P * (CC + EJ) * W_PCustom_Interaction) +
-                (S * T * W_ST_Interaction) +         // 新增：服务端命令与数据表交互
-                (B * CP * W_BCP_Interaction);        // 新增：业务流程与自定义插件交互
+                (B * T * W_BT_Interaction) + // 业务流程与数据表交互
+                (P * (CC + EJ) * W_PCustom_Interaction) + //页面与自定义插件交互
+                (S * T * W_ST_Interaction) +         // 服务端命令与数据表交互
+                (B * S * W_SB_Interaction);        //业务流程与服务端命令交互
 
             // 应用规模因子进行归一化调整
             double adjustedInteractionComplexity = interactionComplexity * (1 + Math.Log10(scaleFactor));
