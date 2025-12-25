@@ -103,6 +103,13 @@ namespace FgccHelper
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(TextBoxProjectDescription.Text))
+            {
+                MessageBox.Show("项目简介不能为空。", "验证错误", MessageBoxButton.OK, MessageBoxImage.Warning);
+                TextBoxProjectDescription.Focus();
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(TextBoxEmail.Text))
             {
                 MessageBox.Show("联系邮箱不能为空。", "验证错误", MessageBoxButton.OK, MessageBoxImage.Warning);

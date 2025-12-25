@@ -39,9 +39,9 @@
                     <TextBox x:Name="TextBoxProjectName" Margin="0,0,0,10" Height="24" TextChanged="TextBoxProjectName_TextChanged"/>
                     <TextBlock Text="作者昵称:" Margin="0,0,0,2"/>
                     <TextBox x:Name="TextBoxAuthorName" Margin="0,0,0,10" Height="24"/>
-                    <TextBlock Text="项目简介 (可选):" Margin="0,0,0,2"/>
+                    <TextBlock Text="项目简介:" Margin="0,0,0,2"/>
                     <TextBox x:Name="TextBoxProjectDescription" Margin="0,0,0,10" Height="60" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
-                    <TextBlock Text="联系邮箱 (可选):" Margin="0,0,0,2"/>
+                    <TextBlock Text="联系邮箱:" Margin="0,0,0,2"/>
                     <TextBox x:Name="TextBoxEmail" Margin="0,0,0,0" Height="24"/>
                 </StackPanel>
             </GroupBox>
@@ -58,7 +58,7 @@
 
             <!-- Action Buttons -->
             <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
-                <Button x:Name="ButtonSubmit" Content="提交到排行榜" Width="120" Height="30" Margin="0,0,10,0" Click="ButtonSubmit_Click"/>
+                <Button x:Name="ButtonSubmit" Content="提交到排行榜" Width="120" Height="30" Margin="0,0,10,0" Click="ButtonSubmit_Click" IsEnabled="{Binding ElementName=CheckBoxAgreeTerms, Path=IsChecked}"/>
                 <Button x:Name="ButtonCancel" Content="取消" Width="80" Height="30" IsCancel="True" Click="ButtonCancel_Click"/>
             </StackPanel>
         </Grid>

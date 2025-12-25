@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Tencent.QCloud.Cos.Sdk" Version="5.4.49" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\FgccHelper\secrets.json" Link="secrets.json" Condition="Exists('..\FgccHelper\secrets.json')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\FgccHelper\Models\UpdateConfig.cs" Link="Models\UpdateConfig.cs" />
+    <Compile Include="..\FgccHelper\Models\VersionInfo.cs" Link="Models\VersionInfo.cs" />
+    <Compile Include="..\FgccHelper\Services\UpdateService.cs" Link="Services\UpdateService.cs" />
+    <Compile Include="..\FgccHelper\Services\CosReleaseTool.cs" Link="Services\CosReleaseTool.cs" />
+  </ItemGroup>
+</Project>

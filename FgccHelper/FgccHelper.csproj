@@ -29,6 +29,7 @@
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -121,12 +122,22 @@
     <Compile Include="Models\Project.cs" />
     <Compile Include="Models\ProjectStatisticsContainer.cs" />
     <Compile Include="Models\StatisticItem.cs" />
+    <Compile Include="Models\UpdateConfig.cs" />
+    <Compile Include="Models\VersionInfo.cs" />
     <Compile Include="Services\ComplexityCalculator.cs" />
     <Compile Include="Services\ExcelExportService.cs" />
     <Compile Include="Services\LeaderboardApiService.cs" />
     <Compile Include="Services\ProjectAnalysisService.cs" />
+    <Compile Include="Services\UpdateService.cs" />
+    <Compile Include="Services\UpdateManager.cs" />
     <Compile Include="SubmitToLeaderboardWindow.xaml.cs">
       <DependentUpon>SubmitToLeaderboardWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="UpdateWindow.xaml.cs">
+      <DependentUpon>UpdateWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="DownloadProgressWindow.xaml.cs">
+      <DependentUpon>DownloadProgressWindow.xaml</DependentUpon>
     </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -168,6 +179,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="UpdateWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="DownloadProgressWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -194,6 +213,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="secrets.json" Condition="Exists('secrets.json')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>

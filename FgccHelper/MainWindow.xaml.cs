@@ -702,6 +702,16 @@ namespace FgccHelper
             aboutDialog.ShowDialog();
         }
 
+        private async void MenuCheckUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            await App.CheckForUpdatesAsync(false);
+        }
+
+        private async void MenuHelpCheckUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            await App.CheckForUpdatesAsync(false);
+        }
+
         private async void MenuRefresh_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(_currentProjectPath) && string.IsNullOrEmpty(_originalOpenedPath))
@@ -1365,6 +1375,39 @@ namespace FgccHelper
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
 
+        }
+
+        private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+        {
+            string mailtoUri = e.Uri.ToString();
+
+            // Ensure mailto: prefix exists
+            if (!mailtoUri.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
+            {
+                mailtoUri = "mailto:" + mailtoUri;
+            }
+
+            try
+            {
+                // Simple and standard way to open default mail client
+                Process.Start(new ProcessStartInfo(mailtoUri) { UseShellExecute = true });
+                e.Handled = true;
+            }
+            catch (Exception ex)
+            {
+                // Fallback: Copy to clipboard if opening fails
+                try
+                {
+                    string email = mailtoUri.Replace("mailto:", "");
+                    Clipboard.SetText(email);
+                    MessageBox.Show($"无法调用系统默认邮件客户端 (错误: {ex.Message})。\n\n已自动将邮箱地址复制到剪贴板：\n{email}", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch
+                {
+                    MessageBox.Show($"无法打开邮箱客户端: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                e.Handled = true;
+            }
         }
     }
 }
